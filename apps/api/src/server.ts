@@ -4,6 +4,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { connectToDatabase } from "./db.js";
 import { freightsRouter } from "./routes/freights.js";
+import { taggiesRouter } from "./routes/taggies.js";
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api/freights", freightsRouter);
+app.use("/api/taggies", taggiesRouter);
 
 app.use((_req, res) => {
   res.status(404).json({ message: "Rota não encontrada." });

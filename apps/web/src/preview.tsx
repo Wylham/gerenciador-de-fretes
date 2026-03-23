@@ -4,6 +4,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FreightForm } from "./components/FreightForm";
 import { FreightTable } from "./components/FreightTable";
 import { Topbar } from "./components/Topbar";
+import { ALL_TAGGY_FILTER, DEFAULT_TAGGY_OPTIONS } from "./constants";
 import type {
   ConnectionStatus,
   FreightFormErrors,
@@ -13,6 +14,7 @@ import type {
 } from "./types";
 import { getTodayInSaoPaulo } from "./utils/date";
 import { formatCentsToInput } from "./utils/money";
+import { mergeTaggyOptions, normalizeTaggyName } from "./utils/taggies";
 
 export type PreviewMode =
   | "default"
@@ -34,7 +36,7 @@ function createMockRecords(date: string): FreightRecord[] {
       taggy: "MOVE MAIS",
       freightCents: 185000,
       receiver: "MOTORISTA",
-      observation: "Entrega agendada para 14h no centro de distribuição.",
+      observation: "Entrega agendada para 14h no centro de distribuicao.",
       createdAt: `${date}T08:12:00.000Z`,
       updatedAt: `${date}T08:12:00.000Z`,
     },
@@ -42,13 +44,13 @@ function createMockRecords(date: string): FreightRecord[] {
       _id: "67d7a0a20c9b1d00001f002",
       date,
       plate: "QWE4R56",
-      client: "Logística Aurora",
+      client: "Logistica Aurora",
       loteMotz: "12377",
       loteAtua: "98802",
       taggy: "SEM PARAR",
       freightCents: 245500,
-      receiver: "PROPRIETÁRIO",
-      observation: "Prioridade alta para saída até 10h.",
+      receiver: "PROPRIET\u00c1RIO",
+      observation: "Prioridade alta para saida ate 10h.",
       createdAt: `${date}T09:05:00.000Z`,
       updatedAt: `${date}T09:05:00.000Z`,
     },
@@ -56,13 +58,13 @@ function createMockRecords(date: string): FreightRecord[] {
       _id: "67d7a0a20c9b1d00001f003",
       date,
       plate: "HJK8L90",
-      client: "Operação Sul Cargo",
+      client: "Operacao Sul Cargo",
       loteMotz: "12410",
       loteAtua: "98855",
       taggy: "VELOE",
       freightCents: 132000,
       receiver: "MOTORISTA",
-      observation: "Conferir nota fiscal antes da saída.",
+      observation: "Conferir nota fiscal antes da saida.",
       createdAt: `${date}T11:46:00.000Z`,
       updatedAt: `${date}T11:46:00.000Z`,
     },
@@ -77,7 +79,7 @@ function filterPreviewRecords(
   const query = search.trim().toLowerCase();
 
   return records.filter((record) => {
-    if (activeTaggy !== "Todos" && record.taggy !== activeTaggy) {
+    if (activeTaggy !== ALL_TAGGY_FILTER && record.taggy !== activeTaggy) {
       return false;
     }
 
@@ -153,7 +155,9 @@ export function PreviewDashboard({ mode }: { mode: PreviewMode }) {
   const baseRecords = createMockRecords(selectedDate);
   const previewRecords = mode === "empty" ? [] : baseRecords;
   const [search, setSearch] = useState(mode === "default" ? "Transportadora" : "");
-  const [activeTaggy, setActiveTaggy] = useState<TaggyFilter>("Todos");
+  const [activeTaggy, setActiveTaggy] = useState<TaggyFilter>(ALL_TAGGY_FILTER);
+  const [taggyOptions, setTaggyOptions] = useState<string[]>(() => [...DEFAULT_TAGGY_OPTIONS]);
+  const [taggyDraft, setTaggyDraft] = useState("");
   const [formValues, setFormValues] = useState<FreightFormValues>(
     createPreviewForm(selectedDate, mode, previewRecords),
   );
@@ -162,8 +166,10 @@ export function PreviewDashboard({ mode }: { mode: PreviewMode }) {
   const formErrors: FreightFormErrors = {};
   const connectionStatus: ConnectionStatus =
     mode === "offline"
-      ? { state: "offline", detail: "Conectividade instável." }
-      : { state: "online", detail: "Sincronizado com a operação do dia." };
+      ? { state: "offline", detail: "Conectividade instavel." }
+      : { state: "online", detail: "Sincronizado com a operacao do dia." };
+  const formTaggyOptions = mergeTaggyOptions(taggyOptions, formValues.taggy ? [formValues.taggy] : []);
+  const filterTaggyOptions = mergeTaggyOptions(taggyOptions, previewRecords.map((record) => record.taggy));
 
   function handlePreviewSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -194,10 +200,34 @@ export function PreviewDashboard({ mode }: { mode: PreviewMode }) {
           isSubmitting={false}
           selectedDate={selectedDate}
           plateInputRef={plateInputRef}
+          selectableTaggyOptions={formTaggyOptions}
+          configuredTaggyOptions={taggyOptions}
+          taggyDraft={taggyDraft}
+          taggyDraftError={null}
+          isLoadingTaggies={false}
+          isSavingTaggy={false}
+          pendingTaggyDelete={null}
+          onTaggyDraftChange={setTaggyDraft}
+          onAddTaggy={() => {
+            const nextTaggy = normalizeTaggyName(taggyDraft);
+            if (!nextTaggy) {
+              return;
+            }
+
+            setTaggyOptions((current) => mergeTaggyOptions(current, [nextTaggy]));
+            setFormValues((current) => ({
+              ...current,
+              taggy: nextTaggy,
+            }));
+            setTaggyDraft("");
+          }}
+          onDeleteTaggy={(option) => {
+            setTaggyOptions((current) => current.filter((item) => item !== option));
+          }}
           onChange={(field, value) =>
             setFormValues((current) => ({
               ...current,
-              [field]: value,
+              [field]: field === "taggy" ? normalizeTaggyName(value) : value,
             }))
           }
           onSubmit={handlePreviewSubmit}
@@ -209,14 +239,15 @@ export function PreviewDashboard({ mode }: { mode: PreviewMode }) {
           filteredRecords={filteredRecords}
           search={search}
           activeTaggy={activeTaggy}
+          taggyOptions={filterTaggyOptions}
           isLoading={false}
-          bannerMessage={mode === "offline" ? "Sem conexão — tentando novamente…" : null}
+          bannerMessage={mode === "offline" ? "Sem conexao - tentando novamente..." : null}
           lastUpdatedAt={`${selectedDate}T12:14:00.000Z`}
           onSearchChange={setSearch}
           onTaggyFilterChange={setActiveTaggy}
           onClearFilters={() => {
             setSearch("");
-            setActiveTaggy("Todos");
+            setActiveTaggy(ALL_TAGGY_FILTER);
           }}
           onTaggyClick={setActiveTaggy}
           onRetry={() => undefined}
@@ -231,8 +262,8 @@ export function PreviewDashboard({ mode }: { mode: PreviewMode }) {
         title={mode === "delete-modal" ? "Excluir frete" : "Limpar Dia"}
         description={
           mode === "delete-modal"
-            ? `Este frete da placa ${baseRecords[0]?.plate ?? "ABC1D23"} será removido permanentemente.`
-            : "Todos os registros da data selecionada serão apagados permanentemente."
+            ? `Este frete da placa ${baseRecords[0]?.plate ?? "ABC1D23"} sera removido permanentemente.`
+            : "Todos os registros da data selecionada serao apagados permanentemente."
         }
         confirmLabel={mode === "delete-modal" ? "Excluir" : "Limpar Dia"}
         isLoading={false}

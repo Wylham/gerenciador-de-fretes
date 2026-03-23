@@ -1,5 +1,5 @@
 import { InferSchemaType, Schema, model } from "mongoose";
-import { RECEIVER_OPTIONS, TAGGY_OPTIONS } from "../validation.js";
+import { RECEIVER_OPTIONS, normalizeTaggyName } from "../validation.js";
 
 const freightSchema = new Schema(
   {
@@ -32,7 +32,8 @@ const freightSchema = new Schema(
     taggy: {
       type: String,
       required: true,
-      enum: TAGGY_OPTIONS,
+      trim: true,
+      set: (value: string) => normalizeTaggyName(value),
     },
     freightCents: {
       type: Number,

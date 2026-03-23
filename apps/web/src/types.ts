@@ -1,8 +1,8 @@
-import { RECEIVER_OPTIONS, TAGGY_OPTIONS } from "./constants";
+import { RECEIVER_OPTIONS } from "./constants";
 
-export type TaggyOption = (typeof TAGGY_OPTIONS)[number];
+export type TaggyOption = string;
 export type ReceiverOption = (typeof RECEIVER_OPTIONS)[number];
-export type TaggyFilter = "Todos" | TaggyOption;
+export type TaggyFilter = string;
 
 export interface FreightRecord {
   _id: string;

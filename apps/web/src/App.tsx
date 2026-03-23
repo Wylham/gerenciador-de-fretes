@@ -1,11 +1,21 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import { ApiError, clearFreightsByDate, createFreight, deleteFreight, getFreights, updateFreight } from "./api";
+import {
+  ApiError,
+  clearFreightsByDate,
+  createFreight,
+  createTaggy,
+  deleteFreight,
+  deleteTaggy,
+  getFreights,
+  getTaggies,
+  updateFreight,
+} from "./api";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FreightForm } from "./components/FreightForm";
 import { FreightTable } from "./components/FreightTable";
 import { Topbar } from "./components/Topbar";
-import { POLLING_INTERVAL_MS, RECEIVER_OPTIONS, TAGGY_OPTIONS } from "./constants";
+import { ALL_TAGGY_FILTER, DEFAULT_TAGGY_OPTIONS, POLLING_INTERVAL_MS, RECEIVER_OPTIONS } from "./constants";
 import type {
   ConnectionStatus,
   FreightFormErrors,
@@ -21,6 +31,7 @@ import { getTodayInSaoPaulo, isValidDateString } from "./utils/date";
 import { formatCentsToInput, parseMoneyInputToCents, sanitizeMoneyInput } from "./utils/money";
 import { generateFreightsPdf } from "./utils/pdf";
 import { isValidPlate, normalizePlateInput } from "./utils/plate";
+import { mergeTaggyOptions, normalizeTaggyName } from "./utils/taggies";
 import { getPreviewMode, PreviewDashboard } from "./preview";
 
 type ConfirmDialogState =
@@ -65,7 +76,7 @@ function filterFreights(records: FreightRecord[], search: string, activeTaggy: T
   const query = search.trim().toLowerCase();
 
   return records.filter((record) => {
-    if (activeTaggy !== "Todos" && record.taggy !== activeTaggy) {
+    if (activeTaggy !== ALL_TAGGY_FILTER && record.taggy !== activeTaggy) {
       return false;
     }
 
@@ -89,7 +100,7 @@ function classifyRequestError(error: unknown): ConnectionStatus {
   if (!navigator.onLine || error instanceof TypeError) {
     return {
       state: "offline",
-      detail: "Sem conexão com a API.",
+      detail: "Sem conexao com a API.",
     };
   }
 
@@ -132,11 +143,25 @@ function normalizeApiErrors(errors: unknown): FreightFormErrors | null {
   return Object.keys(nextErrors).length > 0 ? nextErrors : null;
 }
 
+function extractApiFieldError(details: unknown, field: string): string | null {
+  if (!details || typeof details !== "object" || !("errors" in details)) {
+    return null;
+  }
+
+  const errors = (details as { errors?: unknown }).errors;
+  if (!errors || typeof errors !== "object") {
+    return null;
+  }
+
+  const value = (errors as Record<string, unknown>)[field];
+  return typeof value === "string" ? value : null;
+}
+
 function validateForm(values: FreightFormValues): FreightFormErrors {
   const errors: FreightFormErrors = {};
 
   if (!values.date || !isValidDateString(values.date)) {
-    errors.date = "Informe uma data válida.";
+    errors.date = "Informe uma data valida.";
   }
 
   if (!values.plate) {
@@ -157,8 +182,8 @@ function validateForm(values: FreightFormValues): FreightFormErrors {
     errors.loteAtua = "Informe o lote ATUA.";
   }
 
-  if (!TAGGY_OPTIONS.includes(values.taggy as TaggyOption)) {
-    errors.taggy = "Selecione uma opção de Taggy.";
+  if (!normalizeTaggyName(values.taggy)) {
+    errors.taggy = "Selecione uma opcao de Taggy.";
   }
 
   if (parseMoneyInputToCents(values.freight) === null) {
@@ -179,7 +204,7 @@ function toPayload(values: FreightFormValues): FreightPayload {
     client: values.client.trim(),
     loteMotz: values.loteMotz.trim(),
     loteAtua: values.loteAtua.trim(),
-    taggy: values.taggy as TaggyOption,
+    taggy: normalizeTaggyName(values.taggy) as TaggyOption,
     freightCents: parseMoneyInputToCents(values.freight) as number,
     receiver: values.receiver as ReceiverOption,
     observation: values.observation.trim() || undefined,
@@ -193,7 +218,7 @@ function buildFilterSummary(search: string, activeTaggy: TaggyFilter): string | 
     parts.push(`Busca: ${search.trim()}`);
   }
 
-  if (activeTaggy !== "Todos") {
+  if (activeTaggy !== ALL_TAGGY_FILTER) {
     parts.push(`Taggy: ${activeTaggy}`);
   }
 
@@ -210,11 +235,12 @@ export default function App() {
   const today = getTodayInSaoPaulo();
   const [selectedDate, setSelectedDate] = useState(today);
   const [records, setRecords] = useState<FreightRecord[]>([]);
+  const [taggyOptions, setTaggyOptions] = useState<string[]>(() => [...DEFAULT_TAGGY_OPTIONS]);
   const [formValues, setFormValues] = useState<FreightFormValues>(() => createEmptyForm(today));
   const [formErrors, setFormErrors] = useState<FreightFormErrors>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [activeTaggy, setActiveTaggy] = useState<TaggyFilter>("Todos");
+  const [activeTaggy, setActiveTaggy] = useState<TaggyFilter>(ALL_TAGGY_FILTER);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     state: "loading",
     detail: "Carregando registros do dia.",
@@ -223,7 +249,12 @@ export default function App() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRecords, setIsLoadingRecords] = useState(true);
+  const [isLoadingTaggies, setIsLoadingTaggies] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
+  const [isSavingTaggy, setIsSavingTaggy] = useState(false);
+  const [pendingTaggyDelete, setPendingTaggyDelete] = useState<string | null>(null);
+  const [taggyDraft, setTaggyDraft] = useState("");
+  const [taggyDraftError, setTaggyDraftError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(null);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -231,6 +262,8 @@ export default function App() {
   const plateInputRef = useRef<HTMLInputElement | null>(null);
 
   const filteredRecords = filterFreights(records, search, activeTaggy);
+  const formTaggyOptions = mergeTaggyOptions(taggyOptions, formValues.taggy ? [formValues.taggy] : []);
+  const filterTaggyOptions = mergeTaggyOptions(taggyOptions, records.map((record) => record.taggy));
 
   function focusForm() {
     plateInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -277,12 +310,12 @@ export default function App() {
       setBannerMessage(null);
       setConnectionStatus({
         state: "online",
-        detail: "Sincronizado com a operação do dia.",
+        detail: "Sincronizado com a operacao do dia.",
       });
 
       if (editingId && !nextRecords.some((record) => record._id === editingId)) {
         resetForm(selectedDate);
-        showToast("warning", "O frete em edição não está mais disponível.");
+        showToast("warning", "O frete em edicao nao esta mais disponivel.");
       }
 
       if (options?.manual) {
@@ -295,7 +328,7 @@ export default function App() {
 
       const status = classifyRequestError(error);
       setConnectionStatus(status);
-      setBannerMessage("Sem conexão — tentando novamente…");
+      setBannerMessage("Sem conexao - tentando novamente...");
 
       if (options?.manual) {
         showToast("error", status.detail);
@@ -307,10 +340,30 @@ export default function App() {
     }
   }
 
+  async function loadTaggyOptions(options?: { silent?: boolean }) {
+    if (!options?.silent) {
+      setIsLoadingTaggies(true);
+    }
+
+    try {
+      const response = await getTaggies();
+      setTaggyOptions(mergeTaggyOptions(response.taggyOptions));
+      setTaggyDraftError(null);
+    } catch {
+      if (!options?.silent) {
+        showToast("error", "Falha ao carregar as taggys.");
+      }
+    } finally {
+      if (!options?.silent) {
+        setIsLoadingTaggies(false);
+      }
+    }
+  }
+
   async function handleReload() {
     setIsReloading(true);
     try {
-      await loadRecords({ manual: true });
+      await Promise.all([loadRecords({ manual: true }), loadTaggyOptions({ silent: true })]);
     } finally {
       setIsReloading(false);
     }
@@ -319,6 +372,10 @@ export default function App() {
   useEffect(() => {
     void loadRecords();
   }, [selectedDate]);
+
+  useEffect(() => {
+    void loadTaggyOptions();
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -332,13 +389,13 @@ export default function App() {
     const onOffline = () => {
       setConnectionStatus({
         state: "offline",
-        detail: "Sem conexão com a internet.",
+        detail: "Sem conexao com a internet.",
       });
-      setBannerMessage("Sem conexão — tentando novamente…");
+      setBannerMessage("Sem conexao - tentando novamente...");
     };
 
     const onOnline = () => {
-      void loadRecords();
+      void Promise.all([loadRecords(), loadTaggyOptions({ silent: true })]);
     };
 
     window.addEventListener("offline", onOffline);
@@ -362,6 +419,17 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  useEffect(() => {
+    if (activeTaggy === ALL_TAGGY_FILTER) {
+      return;
+    }
+
+    const availableFilters = mergeTaggyOptions(taggyOptions, records.map((record) => record.taggy));
+    if (!availableFilters.includes(activeTaggy)) {
+      setActiveTaggy(ALL_TAGGY_FILTER);
+    }
+  }, [activeTaggy, records, taggyOptions]);
+
   function applySelectedDate(date: string) {
     if (!date || !isValidDateString(date)) {
       return;
@@ -369,7 +437,7 @@ export default function App() {
 
     setSelectedDate(date);
     setSearch("");
-    setActiveTaggy("Todos");
+    setActiveTaggy(ALL_TAGGY_FILTER);
     setBannerMessage(null);
     resetForm(date);
   }
@@ -383,6 +451,10 @@ export default function App() {
 
     if (field === "freight") {
       nextValue = sanitizeMoneyInput(value);
+    }
+
+    if (field === "taggy") {
+      nextValue = normalizeTaggyName(value);
     }
 
     setFormValues((current) => ({
@@ -411,6 +483,65 @@ export default function App() {
       observation: record.observation ?? "",
     });
     focusForm();
+  }
+
+  async function handleAddTaggy() {
+    const nextTaggy = normalizeTaggyName(taggyDraft);
+
+    if (!nextTaggy) {
+      setTaggyDraftError("Informe o nome da Taggy.");
+      return;
+    }
+
+    if (taggyOptions.includes(nextTaggy)) {
+      setTaggyDraftError("Essa Taggy ja esta cadastrada.");
+      return;
+    }
+
+    setIsSavingTaggy(true);
+
+    try {
+      const response = await createTaggy(nextTaggy);
+      setTaggyOptions(mergeTaggyOptions(response.taggyOptions));
+      setTaggyDraft("");
+      setTaggyDraftError(null);
+      handleFieldChange("taggy", response.taggy);
+      showToast("success", "Taggy adicionada.");
+    } catch (error) {
+      const fieldError = error instanceof ApiError ? extractApiFieldError(error.details, "name") : null;
+      setTaggyDraftError(fieldError ?? "Falha ao adicionar a Taggy.");
+      showToast("error", fieldError ?? "Falha ao adicionar a Taggy.");
+    } finally {
+      setIsSavingTaggy(false);
+    }
+  }
+
+  async function handleDeleteTaggy(option: string) {
+    setPendingTaggyDelete(option);
+
+    try {
+      const response = await deleteTaggy(option);
+      setTaggyOptions(mergeTaggyOptions(response.taggyOptions));
+      setTaggyDraftError(null);
+
+      if (!editingId && formValues.taggy === option) {
+        setFormValues((current) => ({
+          ...current,
+          taggy: "",
+        }));
+      }
+
+      if (activeTaggy === option && !records.some((record) => record.taggy === option)) {
+        setActiveTaggy(ALL_TAGGY_FILTER);
+      }
+
+      showToast("warning", "Taggy removida.");
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Falha ao remover a Taggy.";
+      showToast("error", message);
+    } finally {
+      setPendingTaggyDelete(null);
+    }
   }
 
   async function handleConfirmAction() {
@@ -442,13 +573,13 @@ export default function App() {
       setBannerMessage(null);
       setConnectionStatus({
         state: "online",
-        detail: "Sincronizado com a operação do dia.",
+        detail: "Sincronizado com a operacao do dia.",
       });
       void loadRecords({ silent: true });
     } catch (error) {
       const status = classifyRequestError(error);
       setConnectionStatus(status);
-      setBannerMessage("Sem conexão — tentando novamente…");
+      setBannerMessage("Sem conexao - tentando novamente...");
       showToast(
         "error",
         confirmDialog.type === "delete"
@@ -466,7 +597,7 @@ export default function App() {
     const errors = validateForm(formValues);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      showToast("error", "Revise os campos obrigatórios.");
+      showToast("error", "Revise os campos obrigatorios.");
       return;
     }
 
@@ -498,7 +629,7 @@ export default function App() {
       setBannerMessage(null);
       setConnectionStatus({
         state: "online",
-        detail: "Sincronizado com a operação do dia.",
+        detail: "Sincronizado com a operacao do dia.",
       });
       void loadRecords({ silent: true });
     } catch (error) {
@@ -506,7 +637,7 @@ export default function App() {
       setConnectionStatus(status);
 
       if (status.state !== "online") {
-        setBannerMessage("Sem conexão — tentando novamente…");
+        setBannerMessage("Sem conexao - tentando novamente...");
       }
 
       if (
@@ -566,11 +697,24 @@ export default function App() {
           isSubmitting={isSubmitting}
           selectedDate={selectedDate}
           plateInputRef={plateInputRef}
+          selectableTaggyOptions={formTaggyOptions}
+          configuredTaggyOptions={taggyOptions}
+          taggyDraft={taggyDraft}
+          taggyDraftError={taggyDraftError}
+          isLoadingTaggies={isLoadingTaggies}
+          isSavingTaggy={isSavingTaggy}
+          pendingTaggyDelete={pendingTaggyDelete}
+          onTaggyDraftChange={(value) => {
+            setTaggyDraft(value);
+            setTaggyDraftError(null);
+          }}
+          onAddTaggy={handleAddTaggy}
+          onDeleteTaggy={handleDeleteTaggy}
           onChange={handleFieldChange}
           onSubmit={handleSubmit}
           onCancelEdit={() => {
             resetForm(selectedDate);
-            showToast("warning", "Edição cancelada");
+            showToast("warning", "Edicao cancelada");
           }}
         />
 
@@ -579,6 +723,7 @@ export default function App() {
           filteredRecords={filteredRecords}
           search={search}
           activeTaggy={activeTaggy}
+          taggyOptions={filterTaggyOptions}
           isLoading={isLoadingRecords}
           bannerMessage={bannerMessage}
           lastUpdatedAt={lastUpdatedAt}
@@ -586,7 +731,7 @@ export default function App() {
           onTaggyFilterChange={setActiveTaggy}
           onClearFilters={() => {
             setSearch("");
-            setActiveTaggy("Todos");
+            setActiveTaggy(ALL_TAGGY_FILTER);
           }}
           onTaggyClick={setActiveTaggy}
           onRetry={handleReload}
@@ -601,8 +746,8 @@ export default function App() {
         title={confirmDialog?.type === "delete" ? "Excluir frete" : "Limpar Dia"}
         description={
           confirmDialog?.type === "delete"
-            ? `Este frete da placa ${confirmDialog.record.plate} será removido permanentemente.`
-            : "Todos os registros da data selecionada serão apagados permanentemente."
+            ? `Este frete da placa ${confirmDialog.record.plate} sera removido permanentemente.`
+            : "Todos os registros da data selecionada serao apagados permanentemente."
         }
         confirmLabel={confirmDialog?.type === "delete" ? "Excluir" : "Limpar Dia"}
         isLoading={isConfirming}

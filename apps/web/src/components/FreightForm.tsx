@@ -1,5 +1,8 @@
-import type { FormEvent, RefObject } from "react";
-import { RECEIVER_OPTIONS, TAGGY_OPTIONS } from "../constants";
+import { Check, LoaderCircle, PencilLine, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { CSSProperties, FormEvent, RefObject } from "react";
+import { RECEIVER_OPTIONS } from "../constants";
 import type { FreightFormErrors, FreightFormValues } from "../types";
 import { formatDate } from "../utils/date";
 
@@ -11,12 +14,22 @@ interface FreightFormProps {
   isSubmitting: boolean;
   selectedDate: string;
   plateInputRef: RefObject<HTMLInputElement>;
+  selectableTaggyOptions: string[];
+  configuredTaggyOptions: string[];
+  taggyDraft: string;
+  taggyDraftError: string | null;
+  isLoadingTaggies: boolean;
+  isSavingTaggy: boolean;
+  pendingTaggyDelete: string | null;
+  onTaggyDraftChange: (value: string) => void;
+  onAddTaggy: () => void;
+  onDeleteTaggy: (taggy: string) => void;
   onChange: (field: keyof FreightFormValues, value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onCancelEdit: () => void;
 }
 
-function fieldClassName(error?: string): string {
+function fieldClassName(error?: string | null): string {
   return error ? "field field-invalid" : "field";
 }
 
@@ -28,10 +41,114 @@ export function FreightForm({
   isSubmitting,
   selectedDate,
   plateInputRef,
+  selectableTaggyOptions,
+  configuredTaggyOptions,
+  taggyDraft,
+  taggyDraftError,
+  isLoadingTaggies,
+  isSavingTaggy,
+  pendingTaggyDelete,
+  onTaggyDraftChange,
+  onAddTaggy,
+  onDeleteTaggy,
   onChange,
   onSubmit,
   onCancelEdit,
 }: FreightFormProps) {
+  const [isTaggyPopoverOpen, setIsTaggyPopoverOpen] = useState(false);
+  const [isAddTaggyOpen, setIsAddTaggyOpen] = useState(false);
+  const [taggyPopoverStyle, setTaggyPopoverStyle] = useState<CSSProperties | null>(null);
+  const taggyAnchorRef = useRef<HTMLDivElement | null>(null);
+  const taggyPopoverRef = useRef<HTMLDivElement | null>(null);
+  const isSelectedTaggyConfigured = values.taggy ? configuredTaggyOptions.includes(values.taggy) : false;
+
+  useEffect(() => {
+    if (!isTaggyPopoverOpen) {
+      return undefined;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      const isInsideAnchor = taggyAnchorRef.current?.contains(target);
+      const isInsidePopover = taggyPopoverRef.current?.contains(target);
+
+      if (!isInsideAnchor && !isInsidePopover) {
+        setIsTaggyPopoverOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsTaggyPopoverOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isTaggyPopoverOpen]);
+
+  useEffect(() => {
+    if (!isTaggyPopoverOpen) {
+      setIsAddTaggyOpen(false);
+    }
+  }, [isTaggyPopoverOpen]);
+
+  useLayoutEffect(() => {
+    if (!isTaggyPopoverOpen || !taggyAnchorRef.current) {
+      setTaggyPopoverStyle(null);
+      return undefined;
+    }
+
+    const updatePosition = () => {
+      const rect = taggyAnchorRef.current?.getBoundingClientRect();
+      if (!rect) {
+        return;
+      }
+
+      const viewportPadding = 16;
+      const offset = 10;
+      const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2);
+      const left = Math.min(
+        Math.max(viewportPadding, rect.left),
+        Math.max(viewportPadding, window.innerWidth - width - viewportPadding),
+      );
+      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding - offset;
+      const spaceAbove = rect.top - viewportPadding - offset;
+      const shouldOpenUpwards = spaceBelow < 280 && spaceAbove > spaceBelow;
+
+      setTaggyPopoverStyle({
+        position: "fixed",
+        zIndex: 90,
+        width: `${width}px`,
+        left: `${left}px`,
+        top: shouldOpenUpwards ? undefined : `${rect.bottom + offset}px`,
+        bottom: shouldOpenUpwards ? `${window.innerHeight - rect.top + offset}px` : undefined,
+        maxHeight: `${Math.max(120, shouldOpenUpwards ? spaceAbove : spaceBelow)}px`,
+      });
+    };
+
+    updatePosition();
+
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isTaggyPopoverOpen]);
+
+  useEffect(() => {
+    if (!isSavingTaggy && !taggyDraft && !taggyDraftError) {
+      setIsAddTaggyOpen(false);
+    }
+  }, [isSavingTaggy, taggyDraft, taggyDraftError]);
+
   return (
     <section className="panel panel-form">
       <div className="panel-header">
@@ -154,25 +271,168 @@ export function FreightForm({
             </div>
 
             <div className="freight-form-side">
-              <div className={fieldClassName(errors.taggy)}>
+              <div className={`${fieldClassName(errors.taggy)} taggy-field`}>
                 <label>Taggy*</label>
-                <div className="pill-selector" role="radiogroup" aria-label="Taggy">
-                  {TAGGY_OPTIONS.map((option) => (
-                    <button
-                      key={option}
-                      className={`pill-option ${values.taggy === option ? "pill-option-active" : ""}`}
-                      type="button"
-                      aria-pressed={values.taggy === option}
-                      onClick={() => onChange("taggy", option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
+
+                <div className="taggy-selector-shell" ref={taggyAnchorRef}>
+                  <div className={`taggy-selector-summary ${values.taggy ? "taggy-selector-summary-selected" : ""}`}>
+                    <span className="taggy-selector-label">Selecionada</span>
+                    <strong>{values.taggy || "Nenhuma taggy selecionada"}</strong>
+                    <span className="taggy-selector-meta">
+                      {values.taggy
+                        ? isSelectedTaggyConfigured
+                          ? "Opcao pronta para uso."
+                          : "Taggy antiga mantida para este registro."
+                        : "Abra o editor para escolher ou criar uma nova."}
+                    </span>
+                  </div>
+
+                  <button
+                    className={`icon-button taggy-selector-edit ${isTaggyPopoverOpen ? "taggy-selector-edit-active" : ""}`}
+                    type="button"
+                    aria-label="Editar taggys"
+                    aria-expanded={isTaggyPopoverOpen}
+                    onClick={() => setIsTaggyPopoverOpen((current) => !current)}
+                  >
+                    <PencilLine size={16} aria-hidden="true" />
+                  </button>
                 </div>
+
                 {errors.taggy ? <span className="field-error">{errors.taggy}</span> : null}
+
+                {isTaggyPopoverOpen && taggyPopoverStyle && typeof document !== "undefined"
+                  ? createPortal(
+                      <div className="taggy-popover-portal" style={taggyPopoverStyle} ref={taggyPopoverRef}>
+                        <div className="taggy-popover">
+                          <div className="taggy-popover-header">
+                            <div>
+                              <strong>Selecionar Taggy</strong>
+                              <span>{configuredTaggyOptions.length} salvas</span>
+                            </div>
+
+                            <button
+                              className="icon-button"
+                              type="button"
+                              aria-label="Fechar editor de taggys"
+                              onClick={() => setIsTaggyPopoverOpen(false)}
+                            >
+                              <X size={16} aria-hidden="true" />
+                            </button>
+                          </div>
+
+                          <div className="taggy-popover-list" aria-live="polite">
+                            {selectableTaggyOptions.length === 0 && !isLoadingTaggies ? (
+                              <p className="taggy-popover-empty">Nenhuma Taggy configurada. Adicione uma nova opcao.</p>
+                            ) : null}
+
+                            {selectableTaggyOptions.map((option) => {
+                              const isConfigured = configuredTaggyOptions.includes(option);
+
+                              return (
+                                <div key={`taggy-option-${option}`} className="taggy-popover-item">
+                                  <button
+                                    className={`taggy-popover-option ${
+                                      values.taggy === option ? "taggy-popover-option-active" : ""
+                                    }`}
+                                    type="button"
+                                    onClick={() => {
+                                      onChange("taggy", option);
+                                      setIsTaggyPopoverOpen(false);
+                                    }}
+                                  >
+                                    <span className="taggy-popover-option-copy">
+                                      <strong>{option}</strong>
+                                      <span>{isConfigured ? "Disponivel para selecao." : "Em uso apenas neste registro."}</span>
+                                    </span>
+                                    {values.taggy === option ? <Check size={16} aria-hidden="true" /> : null}
+                                  </button>
+
+                                  {isConfigured ? (
+                                    <button
+                                      className="icon-button icon-button-danger"
+                                      type="button"
+                                      aria-label={`Excluir ${option}`}
+                                      onClick={() => onDeleteTaggy(option)}
+                                      disabled={pendingTaggyDelete === option}
+                                    >
+                                      {pendingTaggyDelete === option ? (
+                                        <LoaderCircle size={16} aria-hidden="true" className="status-icon-spinning" />
+                                      ) : (
+                                        <Trash2 size={16} aria-hidden="true" />
+                                      )}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {!isAddTaggyOpen ? (
+                            <button
+                              className="button button-secondary button-compact taggy-add-toggle"
+                              type="button"
+                              onClick={() => setIsAddTaggyOpen(true)}
+                            >
+                              <Plus size={16} aria-hidden="true" />
+                              <span>Adicionar Taggy</span>
+                            </button>
+                          ) : (
+                            <div className="taggy-add-panel">
+                              <label htmlFor="taggy-manager-input">Nova taggy</label>
+                              <input
+                                id="taggy-manager-input"
+                                type="text"
+                                placeholder="Ex.: NOVA TAGGY"
+                                value={taggyDraft}
+                                onChange={(event) => onTaggyDraftChange(event.target.value)}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    onAddTaggy();
+                                  }
+                                }}
+                                aria-invalid={Boolean(taggyDraftError)}
+                              />
+
+                              {taggyDraftError ? <span className="field-error">{taggyDraftError}</span> : null}
+
+                              <div className="taggy-add-actions">
+                                <button
+                                  className="button button-primary button-compact"
+                                  type="button"
+                                  onClick={onAddTaggy}
+                                  disabled={isSavingTaggy}
+                                >
+                                  {isSavingTaggy ? (
+                                    <LoaderCircle size={16} aria-hidden="true" className="status-icon-spinning" />
+                                  ) : (
+                                    <Plus size={16} aria-hidden="true" />
+                                  )}
+                                  <span>Salvar</span>
+                                </button>
+
+                                <button
+                                  className="button button-secondary button-compact"
+                                  type="button"
+                                  onClick={() => {
+                                    onTaggyDraftChange("");
+                                    setIsAddTaggyOpen(false);
+                                  }}
+                                  disabled={isSavingTaggy}
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>,
+                      document.body,
+                    )
+                  : null}
               </div>
 
-              <div className={fieldClassName(errors.observation)}>
+              <div className={`${fieldClassName(errors.observation)} field-observation`}>
                 <label htmlFor="observation">Observacao (opcional)</label>
                 <textarea
                   id="observation"

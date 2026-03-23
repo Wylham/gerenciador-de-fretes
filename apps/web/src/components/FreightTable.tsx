@@ -1,5 +1,5 @@
 import { PackageSearch, PencilLine, Search, Trash2, WifiOff } from "lucide-react";
-import { TAGGY_OPTIONS } from "../constants";
+import { ALL_TAGGY_FILTER, ALL_TAGGY_FILTER_LABEL } from "../constants";
 import type { FreightRecord, TaggyFilter, TaggyOption } from "../types";
 import { formatDate, formatTime } from "../utils/date";
 import { formatCentsToBRL } from "../utils/money";
@@ -9,6 +9,7 @@ interface FreightTableProps {
   filteredRecords: FreightRecord[];
   search: string;
   activeTaggy: TaggyFilter;
+  taggyOptions: string[];
   isLoading: boolean;
   bannerMessage: string | null;
   lastUpdatedAt: string | null;
@@ -53,6 +54,7 @@ export function FreightTable({
   filteredRecords,
   search,
   activeTaggy,
+  taggyOptions,
   isLoading,
   bannerMessage,
   lastUpdatedAt,
@@ -84,8 +86,10 @@ export function FreightTable({
             </>
           ) : (
             <>
-              <span>Exibindo {filteredRecords.length} de {records.length}</span>
-              <span>Atualizado às {lastUpdatedAt ? formatTime(lastUpdatedAt) : "--:--"}</span>
+              <span>
+                Exibindo {filteredRecords.length} de {records.length}
+              </span>
+              <span>Atualizado as {lastUpdatedAt ? formatTime(lastUpdatedAt) : "--:--"}</span>
             </>
           )}
         </div>
@@ -98,21 +102,21 @@ export function FreightTable({
             <input
               id="freight-search"
               type="text"
-              placeholder="Buscar por placa, cliente, lote, taggy…"
+              placeholder="Buscar por placa, cliente, lote, taggy..."
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
             />
           </label>
 
-          <div className="filter-chip-row" role="tablist" aria-label="Filtro rápido por Taggy">
+          <div className="filter-chip-row" role="tablist" aria-label="Filtro rapido por Taggy">
             <button
-              className={`filter-chip ${activeTaggy === "Todos" ? "filter-chip-active" : ""}`}
+              className={`filter-chip ${activeTaggy === ALL_TAGGY_FILTER ? "filter-chip-active" : ""}`}
               type="button"
-              onClick={() => onTaggyFilterChange("Todos")}
+              onClick={() => onTaggyFilterChange(ALL_TAGGY_FILTER)}
             >
-              Todos
+              {ALL_TAGGY_FILTER_LABEL}
             </button>
-            {TAGGY_OPTIONS.map((option) => (
+            {taggyOptions.map((option) => (
               <button
                 key={option}
                 className={`filter-chip ${activeTaggy === option ? "filter-chip-active" : ""}`}
@@ -177,7 +181,7 @@ export function FreightTable({
                     <th>Taggy</th>
                     <th className="numeric-cell">Valor</th>
                     <th>Recebedor</th>
-                    <th className="actions-cell">Ações</th>
+                    <th className="actions-cell">Acoes</th>
                   </tr>
                 </thead>
                 <tbody>

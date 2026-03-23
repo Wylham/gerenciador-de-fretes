@@ -51,6 +51,23 @@ export function getFreights(date: string): Promise<FreightRecord[]> {
   return request<FreightRecord[]>(`/freights?date=${encodeURIComponent(date)}`);
 }
 
+export function getTaggies(): Promise<{ taggyOptions: string[] }> {
+  return request<{ taggyOptions: string[] }>("/taggies");
+}
+
+export function createTaggy(name: string): Promise<{ taggy: string; taggyOptions: string[] }> {
+  return request<{ taggy: string; taggyOptions: string[] }>("/taggies", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function deleteTaggy(name: string): Promise<{ taggy: string; taggyOptions: string[] }> {
+  return request<{ taggy: string; taggyOptions: string[] }>(`/taggies/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+}
+
 export function createFreight(payload: FreightPayload): Promise<FreightRecord> {
   return request<FreightRecord>("/freights", {
     method: "POST",
