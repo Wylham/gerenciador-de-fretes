@@ -1,0 +1,13 @@
+
+> @fretes/web@1.0.0 preview
+> vite preview --host 127.0.0.1 --port 4173
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4173[22m/[39m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+npm error Lifecycle script `preview` failed with error:
+npm error code 4294967295
+npm error path C:\gerenciador-de-fretes\apps\web
+npm error workspace @fretes/web@1.0.0
+npm error location C:\gerenciador-de-fretes\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c vite preview --host 127.0.0.1 --port 4173

@@ -1,0 +1,16 @@
+{
+  "name": "gerenciador-de-fretes",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev:api": "npm run dev --workspace @fretes/api",
+    "dev:web": "npm run dev --workspace @fretes/web"
+  },
+  "dependencies": {
+    "mongodb": "^7.1.0"
+  }
+}
