@@ -56,23 +56,16 @@ app.use((_req, res) => {
   res.status(404).json({ message: "Rota não encontrada." });
 });
 
-app.use(
-  (
-    error: unknown,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
-    const message = error instanceof Error ? error.message : "Erro interno do servidor.";
-    console.error(error);
-    res.status(500).json({ message });
-  },
-);
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const message = error instanceof Error ? error.message : "Erro interno do servidor.";
+  console.error(error);
+  res.status(500).json({ message });
+});
 
 async function bootstrap() {
   await connectToDatabase(mongoUri as string);
-  app.listen(port, () => {
-    console.log(`API pronta em http://localhost:${port}`);
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`API pronta na porta ${port}`);
   });
 }
 
