@@ -1,13 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import {
-  ApiError,
-  clearFreightsByDate,
-  createFreight,
-  deleteFreight,
-  getFreights,
-  updateFreight,
-} from "./api";
+import { ApiError, clearFreightsByDate, createFreight, deleteFreight, getFreights, updateFreight } from "./api";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FreightForm } from "./components/FreightForm";
 import { FreightTable } from "./components/FreightTable";
@@ -68,11 +61,7 @@ function sortFreights(records: FreightRecord[]): FreightRecord[] {
   });
 }
 
-function filterFreights(
-  records: FreightRecord[],
-  search: string,
-  activeTaggy: TaggyFilter,
-): FreightRecord[] {
+function filterFreights(records: FreightRecord[], search: string, activeTaggy: TaggyFilter): FreightRecord[] {
   const query = search.trim().toLowerCase();
 
   return records.filter((record) => {
@@ -462,7 +451,9 @@ export default function App() {
       setBannerMessage("Sem conexão — tentando novamente…");
       showToast(
         "error",
-        confirmDialog.type === "delete" ? "Falha ao remover. Tente novamente." : "Falha ao limpar o dia. Tente novamente.",
+        confirmDialog.type === "delete"
+          ? "Falha ao remover. Tente novamente."
+          : "Falha ao limpar o dia. Tente novamente.",
       );
     } finally {
       setIsConfirming(false);
@@ -488,9 +479,7 @@ export default function App() {
 
         setRecords((current) =>
           sortFreights(
-            current
-              .filter((record) => record._id !== editingId)
-              .concat(updated.date === selectedDate ? [updated] : []),
+            current.filter((record) => record._id !== editingId).concat(updated.date === selectedDate ? [updated] : []),
           ),
         );
 
@@ -581,7 +570,7 @@ export default function App() {
           onSubmit={handleSubmit}
           onCancelEdit={() => {
             resetForm(selectedDate);
-            showToast("warning", "Cancelar edição");
+            showToast("warning", "Edição cancelada");
           }}
         />
 
