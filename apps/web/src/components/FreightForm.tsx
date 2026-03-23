@@ -291,6 +291,7 @@ export function FreightForm({
                     className={`icon-button taggy-selector-edit ${isTaggyPopoverOpen ? "taggy-selector-edit-active" : ""}`}
                     type="button"
                     aria-label="Editar taggys"
+                    title="Editar taggys"
                     aria-expanded={isTaggyPopoverOpen}
                     onClick={() => setIsTaggyPopoverOpen((current) => !current)}
                   >
