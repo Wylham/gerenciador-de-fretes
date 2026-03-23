@@ -149,8 +149,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .topbar {
-  position: sticky;
-  top: 16px;
+  position: relative;
   z-index: 30;
   display: grid;
   grid-template-columns: minmax(260px, 1.15fr) minmax(230px, 0.85fr) minmax(0, 1.35fr);
@@ -588,12 +587,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .freight-form-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+  align-items: start;
 }
 
 .freight-form-main,
 .freight-form-side {
   display: grid;
   gap: 18px;
+  align-content: start;
   padding: 24px;
 }
 
@@ -646,6 +647,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   min-height: 118px;
   padding: 14px 15px;
   resize: vertical;
+}
+
+.field-observation {
+  align-self: start;
 }
 
 .pill-selector,
@@ -1258,7 +1263,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .topbar {
-    top: 8px;
     gap: 14px;
     padding: 16px;
   }
