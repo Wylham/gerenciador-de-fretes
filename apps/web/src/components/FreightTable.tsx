@@ -1,4 +1,14 @@
-import { PackageSearch, PencilLine, Search, Trash2, WifiOff } from "lucide-react";
+import {
+  ArrowsClockwise,
+  FunnelSimpleX,
+  MagnifyingGlass,
+  Package,
+  PencilLine,
+  PlusCircle,
+  Rows,
+  Trash,
+  WifiSlash,
+} from "@phosphor-icons/react";
 import { ALL_TAGGY_FILTER, ALL_TAGGY_FILTER_LABEL } from "../constants";
 import type { FreightRecord, TaggyFilter, TaggyOption } from "../types";
 import { formatDate, formatTime } from "../utils/date";
@@ -74,7 +84,10 @@ export function FreightTable({
       <div className="panel-header panel-header-table">
         <div className="panel-header-copy">
           <span className="panel-kicker">Visao consolidada</span>
-          <h2>Registros</h2>
+          <div className="panel-title-row">
+            <Rows className="panel-title-icon" size={20} aria-hidden="true" />
+            <h2>Registros</h2>
+          </div>
           <p>Busca rapida, filtros por Taggy e total consolidado da operacao.</p>
         </div>
 
@@ -98,7 +111,7 @@ export function FreightTable({
       <div className="panel-body panel-body-table">
         <div className="table-toolbar">
           <label className="search-field" htmlFor="freight-search">
-            <Search size={16} aria-hidden="true" />
+            <MagnifyingGlass size={16} aria-hidden="true" />
             <input
               id="freight-search"
               type="text"
@@ -132,10 +145,11 @@ export function FreightTable({
         {bannerMessage ? (
           <div className="inline-banner" role="status">
             <div className="inline-banner-copy">
-              <WifiOff size={16} aria-hidden="true" />
+              <WifiSlash size={16} aria-hidden="true" />
               <span>{bannerMessage}</span>
             </div>
             <button className="button button-secondary button-compact" type="button" onClick={onRetry}>
+              <ArrowsClockwise size={16} aria-hidden="true" />
               Tentar agora
             </button>
           </div>
@@ -146,10 +160,11 @@ export function FreightTable({
         {!isLoading && records.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">
-              <PackageSearch size={26} aria-hidden="true" />
+              <Package size={26} aria-hidden="true" />
             </div>
             <h3>Nenhum frete cadastrado para esta data.</h3>
             <button className="button button-primary" type="button" onClick={onAddFirstFreight}>
+              <PlusCircle size={16} aria-hidden="true" />
               Adicionar primeiro frete
             </button>
           </div>
@@ -158,10 +173,11 @@ export function FreightTable({
         {!isLoading && records.length > 0 && filteredRecords.length === 0 ? (
           <div className="empty-state empty-state-compact">
             <div className="empty-state-icon">
-              <Search size={22} aria-hidden="true" />
+              <MagnifyingGlass size={22} aria-hidden="true" />
             </div>
             <h3>Nenhum resultado para os filtros atuais.</h3>
             <button className="button button-secondary" type="button" onClick={onClearFilters}>
+              <FunnelSimpleX size={16} aria-hidden="true" />
               Limpar filtros
             </button>
           </div>
@@ -219,7 +235,7 @@ export function FreightTable({
                             title="Excluir"
                             onClick={() => onDelete(record)}
                           >
-                            <Trash2 size={16} aria-hidden="true" />
+                            <Trash size={16} aria-hidden="true" />
                           </button>
                         </div>
                       </td>
@@ -242,7 +258,7 @@ export function FreightTable({
                         <PencilLine size={16} aria-hidden="true" />
                       </button>
                       <button className="icon-button icon-button-danger" type="button" aria-label="Excluir" onClick={() => onDelete(record)}>
-                        <Trash2 size={16} aria-hidden="true" />
+                        <Trash size={16} aria-hidden="true" />
                       </button>
                     </div>
                   </div>

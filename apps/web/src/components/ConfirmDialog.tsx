@@ -1,8 +1,9 @@
-import { AlertTriangle, LoaderCircle } from "lucide-react";
+import { Broom, CircleNotch, Trash, WarningCircle, X } from "@phosphor-icons/react";
 import { useEffect } from "react";
 
 interface ConfirmDialogProps {
   open: boolean;
+  variant: "delete" | "clear";
   title: string;
   description: string;
   confirmLabel: string;
@@ -13,6 +14,7 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({
   open,
+  variant,
   title,
   description,
   confirmLabel,
@@ -20,6 +22,8 @@ export function ConfirmDialog({
   onClose,
   onConfirm,
 }: ConfirmDialogProps) {
+  const ConfirmActionIcon = variant === "clear" ? Broom : Trash;
+
   useEffect(() => {
     if (!open) {
       return undefined;
@@ -54,7 +58,7 @@ export function ConfirmDialog({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="modal-icon">
-          <AlertTriangle size={20} aria-hidden="true" />
+          <WarningCircle size={20} aria-hidden="true" />
         </div>
 
         <div className="modal-copy">
@@ -64,10 +68,15 @@ export function ConfirmDialog({
 
         <div className="modal-actions">
           <button className="button button-secondary" type="button" onClick={onClose} disabled={isLoading}>
-            Cancelar
+            <X size={16} aria-hidden="true" />
+            <span>Cancelar</span>
           </button>
           <button className="button button-danger" type="button" onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? <LoaderCircle size={16} aria-hidden="true" className="status-icon-spinning" /> : null}
+            {isLoading ? (
+              <CircleNotch size={16} aria-hidden="true" className="status-icon-spinning" />
+            ) : (
+              <ConfirmActionIcon size={16} aria-hidden="true" />
+            )}
             <span>{confirmLabel}</span>
           </button>
         </div>

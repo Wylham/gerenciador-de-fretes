@@ -1,4 +1,15 @@
-import { Check, LoaderCircle, PencilLine, Plus, Trash2, X } from "lucide-react";
+import {
+  Check,
+  CircleNotch,
+  FloppyDisk,
+  NotePencil,
+  PencilLine,
+  Plus,
+  PlusCircle,
+  Trash,
+  X,
+  XCircle,
+} from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, FormEvent, RefObject } from "react";
@@ -154,7 +165,10 @@ export function FreightForm({
       <div className="panel-header">
         <div className="panel-header-copy">
           <span className="panel-kicker">Cadastro operacional</span>
-          <h2>{isEditing ? "Editando Frete" : "Novo Frete"}</h2>
+          <div className="panel-title-row">
+            <NotePencil className="panel-title-icon" size={20} aria-hidden="true" />
+            <h2>{isEditing ? "Editando Frete" : "Novo Frete"}</h2>
+          </div>
           <p>
             {isEditing
               ? "Revise os dados do frete e salve para refletir a operacao atual."
@@ -357,9 +371,9 @@ export function FreightForm({
                                       disabled={pendingTaggyDelete === option}
                                     >
                                       {pendingTaggyDelete === option ? (
-                                        <LoaderCircle size={16} aria-hidden="true" className="status-icon-spinning" />
+                                        <CircleNotch size={16} aria-hidden="true" className="status-icon-spinning" />
                                       ) : (
-                                        <Trash2 size={16} aria-hidden="true" />
+                                        <Trash size={16} aria-hidden="true" />
                                       )}
                                     </button>
                                   ) : null}
@@ -405,7 +419,7 @@ export function FreightForm({
                                   disabled={isSavingTaggy}
                                 >
                                   {isSavingTaggy ? (
-                                    <LoaderCircle size={16} aria-hidden="true" className="status-icon-spinning" />
+                                    <CircleNotch size={16} aria-hidden="true" className="status-icon-spinning" />
                                   ) : (
                                     <Plus size={16} aria-hidden="true" />
                                   )}
@@ -451,7 +465,14 @@ export function FreightForm({
 
           <div className="form-actions form-actions-bar">
             <button className="button button-primary button-large" type="submit" disabled={isSubmitting}>
-              {isEditing ? "Atualizar" : "Salvar frete"}
+              {isSubmitting ? (
+                <CircleNotch size={16} aria-hidden="true" className="status-icon-spinning" />
+              ) : isEditing ? (
+                <FloppyDisk size={16} aria-hidden="true" />
+              ) : (
+                <PlusCircle size={16} aria-hidden="true" />
+              )}
+              <span>{isEditing ? "Atualizar" : "Salvar frete"}</span>
             </button>
 
             {isEditing ? (
@@ -461,7 +482,8 @@ export function FreightForm({
                 onClick={onCancelEdit}
                 disabled={isSubmitting}
               >
-                Cancelar edicao
+                <XCircle size={16} aria-hidden="true" />
+                <span>Cancelar edicao</span>
               </button>
             ) : null}
           </div>

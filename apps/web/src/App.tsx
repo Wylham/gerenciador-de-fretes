@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import { CheckCircle, WarningCircle, XCircle } from "@phosphor-icons/react";
 import {
   ApiError,
   clearFreightsByDate,
@@ -223,6 +224,12 @@ function buildFilterSummary(search: string, activeTaggy: TaggyFilter): string | 
   }
 
   return parts.length > 0 ? parts.join(" | ") : undefined;
+}
+
+function ToastStatusIcon({ type }: { type?: ToastState["type"] }) {
+  const Icon = type === "warning" ? WarningCircle : type === "error" ? XCircle : CheckCircle;
+
+  return <Icon className="toast-icon" size={18} aria-hidden="true" weight="fill" />;
 }
 
 export default function App() {
@@ -743,6 +750,7 @@ export default function App() {
 
       <ConfirmDialog
         open={Boolean(confirmDialog)}
+        variant={confirmDialog?.type === "clear" ? "clear" : "delete"}
         title={confirmDialog?.type === "delete" ? "Excluir frete" : "Limpar Dia"}
         description={
           confirmDialog?.type === "delete"
@@ -764,7 +772,7 @@ export default function App() {
         role="status"
         aria-live="polite"
       >
-        <span className="toast-dot" aria-hidden="true" />
+        <ToastStatusIcon type={toast?.type} />
         <span>{toast?.message}</span>
       </div>
     </div>

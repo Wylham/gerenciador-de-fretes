@@ -259,6 +259,7 @@ export function PreviewDashboard({ mode }: { mode: PreviewMode }) {
 
       <ConfirmDialog
         open={mode === "delete-modal" || mode === "clear-modal"}
+        variant={mode === "clear-modal" ? "clear" : "delete"}
         title={mode === "delete-modal" ? "Excluir frete" : "Limpar Dia"}
         description={
           mode === "delete-modal"

@@ -321,14 +321,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--primary-strong);
 }
 
-.status-offline,
-.status-error {
+.status-offline {
   border-color: rgba(211, 164, 93, 0.22);
 }
 
-.status-offline svg,
-.status-error svg {
+.status-offline svg {
   color: var(--warning);
+}
+
+.status-error {
+  border-color: rgba(209, 108, 115, 0.22);
+}
+
+.status-error svg {
+  color: var(--danger);
 }
 
 .topbar-actions {
@@ -527,6 +533,21 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: -0.03em;
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-title-icon {
+  flex: 0 0 auto;
+  color: var(--primary-strong);
+}
+
+.panel-form .panel-title-icon {
+  color: var(--accent-strong);
 }
 
 .panel-header p {
@@ -1316,19 +1337,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   transform: translateY(0);
 }
 
-.toast-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--accent-strong);
+.toast-icon {
+  flex: 0 0 auto;
+  color: var(--accent-strong);
 }
 
-.toast-warning .toast-dot {
-  background: var(--warning);
+.toast-warning .toast-icon {
+  color: var(--warning);
 }
 
-.toast-error .toast-dot {
-  background: var(--danger);
+.toast-error .toast-icon {
+  color: var(--danger);
 }
 
 .modal-overlay {

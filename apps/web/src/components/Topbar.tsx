@@ -1,4 +1,14 @@
-import { CalendarDays, FileDown, LoaderCircle, MoreHorizontal, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react";
+import {
+  ArrowsClockwise,
+  CalendarBlank,
+  CircleNotch,
+  DotsThreeOutline,
+  FileArrowDown,
+  Trash,
+  WarningCircle,
+  WifiHigh,
+  WifiSlash,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import type { ConnectionStatus } from "../types";
 
@@ -22,6 +32,10 @@ function getStatusLabel(state: ConnectionStatus["state"]): string {
     return "Carregando";
   }
 
+  if (state === "error") {
+    return "Erro";
+  }
+
   return "Offline";
 }
 
@@ -38,7 +52,13 @@ export function Topbar({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const StatusIcon =
-    connectionStatus.state === "online" ? Wifi : connectionStatus.state === "loading" ? LoaderCircle : WifiOff;
+    connectionStatus.state === "online"
+      ? WifiHigh
+      : connectionStatus.state === "loading"
+        ? CircleNotch
+        : connectionStatus.state === "error"
+          ? WarningCircle
+          : WifiSlash;
 
   useEffect(() => {
     if (!menuOpen) {
@@ -94,7 +114,7 @@ export function Topbar({
       <label className="topbar-date-field" htmlFor="dashboard-date">
         <span>Data</span>
         <div className="topbar-date-input">
-          <CalendarDays size={16} aria-hidden="true" />
+          <CalendarBlank size={16} aria-hidden="true" />
           <input
             id="dashboard-date"
             type="date"
@@ -119,15 +139,19 @@ export function Topbar({
 
         <div className="topbar-actions">
           <button className="button button-secondary" type="button" onClick={onReload} disabled={isReloading}>
-            <RefreshCw size={16} aria-hidden="true" className={isReloading ? "status-icon-spinning" : undefined} />
+            <ArrowsClockwise
+              size={16}
+              aria-hidden="true"
+              className={isReloading ? "status-icon-spinning" : undefined}
+            />
             <span>Recarregar</span>
           </button>
           <button className="button button-primary" type="button" onClick={onDownloadPdf}>
-            <FileDown size={16} aria-hidden="true" />
+            <FileArrowDown size={16} aria-hidden="true" />
             <span>Exportar PDF</span>
           </button>
           <button className="button button-danger-outline" type="button" onClick={onClearDay} disabled={disableClear}>
-            <Trash2 size={16} aria-hidden="true" />
+            <Trash size={16} aria-hidden="true" />
             <span>Limpar Dia</span>
           </button>
         </div>
@@ -140,7 +164,7 @@ export function Topbar({
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((current) => !current)}
           >
-            <MoreHorizontal size={18} aria-hidden="true" />
+            <DotsThreeOutline size={18} aria-hidden="true" />
           </button>
 
           {menuOpen ? (
@@ -151,11 +175,11 @@ export function Topbar({
                 onClick={() => handleAction(onReload)}
                 disabled={isReloading}
               >
-                <RefreshCw size={16} aria-hidden="true" />
+                <ArrowsClockwise size={16} aria-hidden="true" />
                 <span>Recarregar</span>
               </button>
               <button className="menu-action" type="button" onClick={() => handleAction(onDownloadPdf)}>
-                <FileDown size={16} aria-hidden="true" />
+                <FileArrowDown size={16} aria-hidden="true" />
                 <span>Exportar PDF</span>
               </button>
               <button
@@ -164,7 +188,7 @@ export function Topbar({
                 onClick={() => handleAction(onClearDay)}
                 disabled={disableClear}
               >
-                <Trash2 size={16} aria-hidden="true" />
+                <Trash size={16} aria-hidden="true" />
                 <span>Limpar Dia</span>
               </button>
             </div>
