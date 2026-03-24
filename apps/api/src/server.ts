@@ -10,7 +10,11 @@ dotenv.config();
 
 const port = Number(process.env.PORT || 3001);
 const mongoUri = process.env.MONGODB_URI;
-const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((entry) => entry.trim())
+  .filter(Boolean);
 
 if (!mongoUri) {
   throw new Error("MONGODB_URI não configurado.");
@@ -18,12 +22,23 @@ if (!mongoUri) {
 
 const app = express();
 
+const corsOptions: cors.CorsOptions = {
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Origin não permitida: ${origin}`));
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+};
+
 app.disable("x-powered-by");
-app.use(
-  cors({
-    origin: corsOrigin.split(",").map((entry) => entry.trim()),
-  }),
-);
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 
 app.get("/api/health", async (_req, res) => {
@@ -64,6 +79,7 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 
 async function bootstrap() {
   await connectToDatabase(mongoUri as string);
+
   app.listen(port, "0.0.0.0", () => {
     console.log(`API pronta na porta ${port}`);
   });
