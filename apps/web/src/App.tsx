@@ -101,7 +101,7 @@ function classifyRequestError(error: unknown): ConnectionStatus {
   if (!navigator.onLine || error instanceof TypeError) {
     return {
       state: "offline",
-      detail: "Sem conexao com a API.",
+      detail: "Sem conexao com a operacao.",
     };
   }
 
@@ -250,7 +250,7 @@ export default function App() {
   const [activeTaggy, setActiveTaggy] = useState<TaggyFilter>(ALL_TAGGY_FILTER);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     state: "loading",
-    detail: "Carregando registros do dia.",
+    detail: "Atualizando operacao.",
   });
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
@@ -301,7 +301,7 @@ export default function App() {
       setIsLoadingRecords(true);
       setConnectionStatus({
         state: "loading",
-        detail: "Carregando registros do dia.",
+        detail: "Atualizando operacao.",
       });
     }
 
@@ -317,7 +317,7 @@ export default function App() {
       setBannerMessage(null);
       setConnectionStatus({
         state: "online",
-        detail: "Sincronizado com a operacao do dia.",
+        detail: "Sincronizado com a operacao.",
       });
 
       if (editingId && !nextRecords.some((record) => record._id === editingId)) {
@@ -396,7 +396,7 @@ export default function App() {
     const onOffline = () => {
       setConnectionStatus({
         state: "offline",
-        detail: "Sem conexao com a internet.",
+        detail: "Sem conexao com a operacao.",
       });
       setBannerMessage("Sem conexao - tentando novamente...");
     };
@@ -580,7 +580,7 @@ export default function App() {
       setBannerMessage(null);
       setConnectionStatus({
         state: "online",
-        detail: "Sincronizado com a operacao do dia.",
+        detail: "Sincronizado com a operacao.",
       });
       void loadRecords({ silent: true });
     } catch (error) {
@@ -636,7 +636,7 @@ export default function App() {
       setBannerMessage(null);
       setConnectionStatus({
         state: "online",
-        detail: "Sincronizado com a operacao do dia.",
+        detail: "Sincronizado com a operacao.",
       });
       void loadRecords({ silent: true });
     } catch (error) {

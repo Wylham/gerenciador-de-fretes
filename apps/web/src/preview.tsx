@@ -166,8 +166,8 @@ export function PreviewDashboard({ mode }: { mode: PreviewMode }) {
   const formErrors: FreightFormErrors = {};
   const connectionStatus: ConnectionStatus =
     mode === "offline"
-      ? { state: "offline", detail: "Conectividade instavel." }
-      : { state: "online", detail: "Sincronizado com a operacao do dia." };
+      ? { state: "offline", detail: "Sem conexao com a operacao." }
+      : { state: "online", detail: "Sincronizado com a operacao." };
   const formTaggyOptions = mergeTaggyOptions(taggyOptions, formValues.taggy ? [formValues.taggy] : []);
   const filterTaggyOptions = mergeTaggyOptions(taggyOptions, previewRecords.map((record) => record.taggy));
 

@@ -23,20 +23,20 @@ interface TopbarProps {
   disableClear: boolean;
 }
 
-function getStatusLabel(state: ConnectionStatus["state"]): string {
+function getStatusTitle(state: ConnectionStatus["state"]): string {
   if (state === "online") {
-    return "Online";
+    return "Sistema ativo";
   }
 
   if (state === "loading") {
-    return "Carregando";
+    return "Atualizando";
   }
 
   if (state === "error") {
-    return "Erro";
+    return "Atencao";
   }
 
-  return "Offline";
+  return "Sem conexao";
 }
 
 export function Topbar({
@@ -59,6 +59,7 @@ export function Topbar({
         : connectionStatus.state === "error"
           ? WarningCircle
           : WifiSlash;
+  const statusTitle = getStatusTitle(connectionStatus.state);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -126,13 +127,15 @@ export function Topbar({
 
       <div className="topbar-actions-wrap">
         <div className={`status-badge status-${connectionStatus.state}`}>
-          <StatusIcon
-            size={16}
-            aria-hidden="true"
-            className={connectionStatus.state === "loading" ? "status-icon-spinning" : undefined}
-          />
-          <div>
-            <strong>{getStatusLabel(connectionStatus.state)}</strong>
+          <span className="status-badge-icon-shell" aria-hidden="true">
+            <StatusIcon
+              size={16}
+              className={connectionStatus.state === "loading" ? "status-icon-spinning" : undefined}
+            />
+          </span>
+
+          <div className="status-badge-copy">
+            <strong>{statusTitle}</strong>
             <span>{connectionStatus.detail}</span>
           </div>
         </div>
