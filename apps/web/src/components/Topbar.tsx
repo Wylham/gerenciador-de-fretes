@@ -1,13 +1,4 @@
-import {
-  CalendarDays,
-  FileDown,
-  LoaderCircle,
-  MoreHorizontal,
-  RefreshCw,
-  Trash2,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
+import { CalendarDays, FileDown, LoaderCircle, MoreHorizontal, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ConnectionStatus } from "../types";
 
@@ -47,11 +38,7 @@ export function Topbar({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const StatusIcon =
-    connectionStatus.state === "online"
-      ? Wifi
-      : connectionStatus.state === "loading"
-        ? LoaderCircle
-        : WifiOff;
+    connectionStatus.state === "online" ? Wifi : connectionStatus.state === "loading" ? LoaderCircle : WifiOff;
 
   useEffect(() => {
     if (!menuOpen) {
@@ -91,10 +78,16 @@ export function Topbar({
   return (
     <header className="topbar">
       <div className="topbar-brand">
-        <span className="eyebrow">Painel operacional</span>
-        <div className="topbar-title">
-          <h1>Fretes do Dia</h1>
-          <p>Controle diário de cargas, lotes e repasses.</p>
+        <div className="topbar-brand-logo">
+          <img src="/brand/pianettosym.PNG" alt="Pianetto" />
+        </div>
+
+        <div className="topbar-brand-copy">
+          <span className="eyebrow">Painel operacional</span>
+          <div className="topbar-title">
+            <h1>Fretes do Dia</h1>
+            <p>Controle diario de cargas, lotes e repasses.</p>
+          </div>
         </div>
       </div>
 
@@ -133,12 +126,7 @@ export function Topbar({
             <FileDown size={16} aria-hidden="true" />
             <span>Exportar PDF</span>
           </button>
-          <button
-            className="button button-danger-outline"
-            type="button"
-            onClick={onClearDay}
-            disabled={disableClear}
-          >
+          <button className="button button-danger-outline" type="button" onClick={onClearDay} disabled={disableClear}>
             <Trash2 size={16} aria-hidden="true" />
             <span>Limpar Dia</span>
           </button>
@@ -148,7 +136,7 @@ export function Topbar({
           <button
             className="icon-button topbar-menu-trigger"
             type="button"
-            aria-label="Abrir ações"
+            aria-label="Abrir acoes"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((current) => !current)}
           >
@@ -157,7 +145,12 @@ export function Topbar({
 
           {menuOpen ? (
             <div className="topbar-menu">
-              <button className="menu-action" type="button" onClick={() => handleAction(onReload)} disabled={isReloading}>
+              <button
+                className="menu-action"
+                type="button"
+                onClick={() => handleAction(onReload)}
+                disabled={isReloading}
+              >
                 <RefreshCw size={16} aria-hidden="true" />
                 <span>Recarregar</span>
               </button>
