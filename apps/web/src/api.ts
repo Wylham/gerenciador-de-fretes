@@ -1,6 +1,10 @@
 import type { FreightPayload, FreightRecord } from "./types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const API_BASE_URL = (configuredApiBaseUrl || (import.meta.env.DEV ? "http://localhost:3001/api" : "")).replace(
+  /\/+$/,
+  "",
+);
 
 export class ApiError extends Error {
   status: number;
@@ -15,6 +19,10 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new ApiError("VITE_API_BASE_URL nao configurado para producao.", 500);
+  }
+
   const headers = new Headers(init.headers);
   const hasBody = init.body !== undefined && init.body !== null;
 
