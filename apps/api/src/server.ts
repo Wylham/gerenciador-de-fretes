@@ -8,13 +8,9 @@ import { taggiesRouter } from "./routes/taggies.js";
 
 dotenv.config();
 
-const port = Number(process.env.PORT || 3001);
+const port = Number(process.env.PORT || 8080);
 const mongoUri = process.env.MONGODB_URI;
-
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
-  .split(",")
-  .map((entry) => entry.trim())
-  .filter(Boolean);
+const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
 
 if (!mongoUri) {
   throw new Error("MONGODB_URI não configurado.");
@@ -22,26 +18,37 @@ if (!mongoUri) {
 
 const app = express();
 
-const corsOptions: cors.CorsOptions = {
-  origin(origin, callback) {
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error(`Origin não permitida: ${origin}`));
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type"],
-};
+let dbReady = false;
+let dbError: string | null = null;
 
 app.disable("x-powered-by");
-app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
+app.use(
+  cors({
+    origin: corsOrigin.split(",").map((entry) => entry.trim()),
+  }),
+);
 app.use(express.json());
 
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    ok: true,
+    service: "api",
+    db: dbReady ? "up" : "down",
+    dbError,
+    time: new Date().toISOString(),
+  });
+});
+
 app.get("/api/health", async (_req, res) => {
+  if (!dbReady) {
+    return res.status(503).json({
+      ok: false,
+      db: "down",
+      message: dbError || "Banco ainda não conectado.",
+      time: new Date().toISOString(),
+    });
+  }
+
   try {
     const db = mongoose.connection.db;
     if (!db) {
@@ -49,19 +56,29 @@ app.get("/api/health", async (_req, res) => {
     }
 
     await db.admin().ping();
+
     return res.json({
       ok: true,
-      time: new Date().toISOString(),
       db: "ok",
+      time: new Date().toISOString(),
     });
   } catch (error) {
     return res.status(503).json({
       ok: false,
-      time: new Date().toISOString(),
       db: "error",
       message: error instanceof Error ? error.message : "Erro ao acessar o MongoDB.",
+      time: new Date().toISOString(),
     });
   }
+});
+
+app.use("/api", (req, res, next) => {
+  if (!dbReady && req.path !== "/health") {
+    return res.status(503).json({
+      message: "Banco de dados indisponível no momento.",
+    });
+  }
+  next();
 });
 
 app.use("/api/freights", freightsRouter);
@@ -77,15 +94,18 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
   res.status(500).json({ message });
 });
 
-async function bootstrap() {
-  await connectToDatabase(mongoUri as string);
-
-  app.listen(port, "0.0.0.0", () => {
-    console.log(`API pronta na porta ${port}`);
-  });
-}
-
-bootstrap().catch((error) => {
-  console.error("Falha ao iniciar a API:", error);
-  process.exit(1);
+app.listen(port, "0.0.0.0", () => {
+  console.log(`API pronta na porta ${port}`);
 });
+
+connectToDatabase(mongoUri)
+  .then(() => {
+    dbReady = true;
+    dbError = null;
+    console.log("MongoDB conectado com sucesso.");
+  })
+  .catch((error) => {
+    dbReady = false;
+    dbError = error instanceof Error ? error.message : "Falha ao conectar no MongoDB.";
+    console.error("Falha ao conectar no MongoDB:", error);
+  });
